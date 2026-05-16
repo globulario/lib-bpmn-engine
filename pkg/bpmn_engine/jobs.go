@@ -13,6 +13,9 @@ type job struct {
 	JobKey             int64         `json:"jk"`
 	JobState           ActivityState `json:"s"`
 	CreatedAt          time.Time     `json:"c"`
+	ElementType        string        `json:"et,omitempty"`
+	Assignee           string        `json:"as,omitempty"`
+	CandidateGroups    []string      `json:"cg,omitempty"`
 	baseElement        *BPMN20.BaseElement
 }
 
@@ -48,6 +51,9 @@ func findOrCreateJob(jobs *[]*job, element *BPMN20.TaskElement, instance *proces
 		JobKey:             elementInstanceKey + 1,
 		JobState:           Active,
 		CreatedAt:          time.Now(),
+		ElementType:        string((*element).GetType()),
+		Assignee:           (*element).GetAssignmentAssignee(),
+		CandidateGroups:    (*element).GetAssignmentCandidateGroups(),
 		baseElement:        &be,
 	}
 

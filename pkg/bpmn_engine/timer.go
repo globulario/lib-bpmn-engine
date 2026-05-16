@@ -22,10 +22,12 @@ type Timer struct {
 	CreatedAt          time.Time     `json:"c"`
 	DueAt              time.Time     `json:"da"`
 	Duration           time.Duration `json:"du"`
-	// isBoundary marks timers created from boundaryEvent elements
-	isBoundary      bool
-	// parentElementId is the ID of the activity this boundary timer is attached to
-	parentElementId string
+	// IsBoundary marks timers created from boundaryEvent elements
+	IsBoundary bool `json:"ib,omitempty"`
+	// IsInterrupting marks interrupting boundary timers
+	IsInterrupting bool `json:"ii,omitempty"`
+	// ParentElementId is the ID of the activity this boundary timer is attached to
+	ParentElementId string `json:"peid,omitempty"`
 	originActivity  activity
 	baseElement     *BPMN20.BaseElement
 }
@@ -161,8 +163,9 @@ func (state *BpmnEngineState) createBoundaryTimer(instance *processInstanceInfo,
 		CreatedAt:          now,
 		DueAt:              durationVal.Shift(now),
 		Duration:           time.Duration(durationVal.TS) * time.Second,
-		isBoundary:         true,
-		parentElementId:    be.AttachedToRef,
+		IsBoundary:         true,
+		IsInterrupting:     be.CancelActivity,
+		ParentElementId:    be.AttachedToRef,
 		baseElement:        &elem,
 		originActivity:     parentActivity,
 	}
@@ -172,7 +175,7 @@ func (state *BpmnEngineState) createBoundaryTimer(instance *processInstanceInfo,
 
 func findExistingBoundaryTimerNotYetTriggered(state *BpmnEngineState, boundaryEventId string, instance *processInstanceInfo) *Timer {
 	for _, t := range state.timers {
-		if t.isBoundary && t.ElementId == boundaryEventId && t.ProcessInstanceKey == instance.InstanceKey && t.TimerState == TimerCreated {
+		if t.IsBoundary && t.ElementId == boundaryEventId && t.ProcessInstanceKey == instance.InstanceKey && t.TimerState == TimerCreated {
 			return t
 		}
 	}

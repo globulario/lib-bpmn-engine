@@ -2,6 +2,7 @@ package bpmn_engine
 
 import (
 	"sort"
+	"time"
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/globulario/lib-bpmn-engine/pkg/bpmn_engine/exporter"
@@ -65,6 +66,86 @@ func (state *BpmnEngineState) FindProcessesById(id string) (infos []*ProcessInfo
 		return infos[i].Version < infos[j].Version
 	})
 	return infos
+}
+
+// ActiveJobInfo holds inspectable information about an active job.
+type ActiveJobInfo struct {
+	ElementID       string
+	ElementType     string
+	Assignee        string
+	CandidateGroups []string
+}
+
+// ActiveJobsForInstance returns info about Active jobs for a given instance key.
+func (state *BpmnEngineState) ActiveJobsForInstance(instanceKey int64) []ActiveJobInfo {
+	var result []ActiveJobInfo
+	for _, j := range state.jobs {
+		if j.ProcessInstanceKey == instanceKey && j.JobState == Active {
+			result = append(result, ActiveJobInfo{
+				ElementID:       j.ElementId,
+				ElementType:     j.ElementType,
+				Assignee:        j.Assignee,
+				CandidateGroups: j.CandidateGroups,
+			})
+		}
+	}
+	return result
+}
+
+// CreatedTimerInfo holds inspectable information about a pending timer.
+type CreatedTimerInfo struct {
+	ElementID      string
+	IsBoundary     bool
+	IsInterrupting bool
+	AttachedToRef  string
+	DueAt          time.Time
+}
+
+// CreatedTimersForInstance returns info about Created (pending) timers for a given instance key.
+func (state *BpmnEngineState) CreatedTimersForInstance(instanceKey int64) []CreatedTimerInfo {
+	var result []CreatedTimerInfo
+	for _, t := range state.timers {
+		if t.ProcessInstanceKey == instanceKey && t.TimerState == TimerCreated {
+			result = append(result, CreatedTimerInfo{
+				ElementID:      t.ElementId,
+				IsBoundary:     t.IsBoundary,
+				IsInterrupting: t.IsInterrupting,
+				AttachedToRef:  t.ParentElementId,
+				DueAt:          t.DueAt,
+			})
+		}
+	}
+	return result
+}
+
+// ActiveSubscriptionInfo holds inspectable information about an active message subscription.
+type ActiveSubscriptionInfo struct {
+	ElementID   string
+	MessageName string
+}
+
+// ActiveSubscriptionsForInstance returns active message subscriptions for a given instance key.
+func (state *BpmnEngineState) ActiveSubscriptionsForInstance(instanceKey int64) []ActiveSubscriptionInfo {
+	var result []ActiveSubscriptionInfo
+	for _, ms := range state.messageSubscriptions {
+		if ms.ProcessInstanceKey == instanceKey && ms.MessageState == Active {
+			result = append(result, ActiveSubscriptionInfo{
+				ElementID:   ms.ElementId,
+				MessageName: ms.Name,
+			})
+		}
+	}
+	return result
+}
+
+// InstanceActivityState returns the ActivityState of a process instance by key.
+func (state *BpmnEngineState) InstanceActivityState(instanceKey int64) ActivityState {
+	for _, pi := range state.processInstances {
+		if pi.InstanceKey == instanceKey {
+			return pi.ActivityState
+		}
+	}
+	return Completed
 }
 
 func (state *BpmnEngineState) checkExclusiveGatewayDone(activity eventBasedGatewayActivity) {
