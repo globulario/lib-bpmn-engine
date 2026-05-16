@@ -4,7 +4,7 @@ import (
 	"github.com/pbinitiative/feel"
 	"strings"
 
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20/extensions"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20/extensions"
 )
 
 func evaluateExpression(expression string, variableContext map[string]interface{}) (interface{}, error) {

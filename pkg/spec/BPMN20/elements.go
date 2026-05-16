@@ -1,6 +1,6 @@
 package BPMN20
 
-import "github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20/extensions"
+import "github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20/extensions"
 
 type ElementType string
 type GatewayDirection string
@@ -18,6 +18,8 @@ const (
 	IntermediateThrowEvent ElementType = "INTERMEDIATE_THROW_EVENT"
 	EventBasedGateway      ElementType = "EVENT_BASED_GATEWAY"
 	InclusiveGateway       ElementType = "INCLUSIVE_GATEWAY"
+	ManualTask             ElementType = "MANUAL_TASK"
+	BoundaryEvent          ElementType = "BOUNDARY_EVENT"
 
 	SequenceFlow ElementType = "SEQUENCE_FLOW"
 
@@ -65,6 +67,8 @@ type ProcessElement interface {
 	GetEventBasedGateway() []TEventBasedGateway
 	GetSubProcess() []TSubProcess
 	GetInclusiveGateway() []TInclusiveGateway
+	GetManualTasks() []TManualTask
+	GetBoundaryEvents() []TBoundaryEvent
 }
 
 func (startEvent TStartEvent) GetId() string {
@@ -428,6 +432,14 @@ func (process TProcess) GetInclusiveGateway() []TInclusiveGateway {
 	return process.InclusiveGateway
 }
 
+func (process TProcess) GetManualTasks() []TManualTask {
+	return process.ManualTasks
+}
+
+func (process TProcess) GetBoundaryEvents() []TBoundaryEvent {
+	return process.BoundaryEvents
+}
+
 func (subProcess TSubProcess) GetId() string {
 	return subProcess.Id
 }
@@ -495,3 +507,36 @@ func (subProcess TSubProcess) GetSubProcess() []TSubProcess {
 func (subProcess TSubProcess) GetInclusiveGateway() []TInclusiveGateway {
 	return subProcess.InclusiveGateway
 }
+
+func (subProcess TSubProcess) GetManualTasks() []TManualTask {
+	return subProcess.ManualTasks
+}
+
+func (subProcess TSubProcess) GetBoundaryEvents() []TBoundaryEvent {
+	return subProcess.BoundaryEvents
+}
+
+// -------------------------------------------------------------------------
+// TManualTask
+
+func (t TManualTask) GetId() string                            { return t.Id }
+func (t TManualTask) GetName() string                          { return t.Name }
+func (t TManualTask) GetIncomingAssociation() []string         { return t.IncomingAssociation }
+func (t TManualTask) GetOutgoingAssociation() []string         { return t.OutgoingAssociation }
+func (t TManualTask) GetType() ElementType                     { return ManualTask }
+func (t TManualTask) GetInputMapping() []extensions.TIoMapping { return t.Input }
+func (t TManualTask) GetOutputMapping() []extensions.TIoMapping { return t.Output }
+func (t TManualTask) GetTaskDefinitionType() string            { return "" }
+func (t TManualTask) GetAssignmentAssignee() string            { return "" }
+func (t TManualTask) GetAssignmentCandidateGroups() []string   { return nil }
+
+// -------------------------------------------------------------------------
+// TBoundaryEvent
+
+func (b TBoundaryEvent) GetId() string                    { return b.Id }
+func (b TBoundaryEvent) GetName() string                  { return b.Name }
+func (b TBoundaryEvent) GetIncomingAssociation() []string { return b.IncomingAssociation }
+func (b TBoundaryEvent) GetOutgoingAssociation() []string { return b.OutgoingAssociation }
+func (b TBoundaryEvent) GetType() ElementType             { return BoundaryEvent }
+func (b TBoundaryEvent) IsTimer() bool                    { return b.TimerEventDefinition.Id != "" || b.TimerEventDefinition.TimeDuration.XMLText != "" }
+func (b TBoundaryEvent) IsMessage() bool                  { return b.MessageEventDefinition.Id != "" || b.MessageEventDefinition.MessageRef != "" }

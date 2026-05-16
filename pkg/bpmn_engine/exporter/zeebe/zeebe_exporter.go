@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/hazelcast/hazelcast-go-client"
-	bpmnEngineExporter "github.com/nitram509/lib-bpmn-engine/pkg/bpmn_engine/exporter"
+	bpmnEngineExporter "github.com/globulario/lib-bpmn-engine/pkg/bpmn_engine/exporter"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"time"

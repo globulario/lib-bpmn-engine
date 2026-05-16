@@ -1,7 +1,7 @@
 package bpmn_engine
 
 import (
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20"
 	"time"
 )
 

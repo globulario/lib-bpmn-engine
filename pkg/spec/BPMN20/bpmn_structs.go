@@ -1,6 +1,6 @@
 package BPMN20
 
-import "github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20/extensions"
+import "github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20/extensions"
 
 type TDefinitions struct {
 	Id                 string     `xml:"id,attr"`
@@ -30,6 +30,7 @@ type TProcess struct {
 	SequenceFlows                []TSequenceFlow           `xml:"sequenceFlow"`
 	ServiceTasks                 []TServiceTask            `xml:"serviceTask"`
 	UserTasks                    []TUserTask               `xml:"userTask"`
+	ManualTasks                  []TManualTask             `xml:"manualTask"`
 	SubProcesses                 []TSubProcess             `xml:"subProcess"`
 	ParallelGateway              []TParallelGateway        `xml:"parallelGateway"`
 	ExclusiveGateway             []TExclusiveGateway       `xml:"exclusiveGateway"`
@@ -37,6 +38,7 @@ type TProcess struct {
 	IntermediateTrowEvent        []TIntermediateThrowEvent `xml:"intermediateThrowEvent"`
 	EventBasedGateway            []TEventBasedGateway      `xml:"eventBasedGateway"`
 	InclusiveGateway             []TInclusiveGateway       `xml:"inclusiveGateway"`
+	BoundaryEvents               []TBoundaryEvent          `xml:"boundaryEvent"`
 }
 
 type TSubProcess struct {
@@ -47,6 +49,7 @@ type TSubProcess struct {
 	SequenceFlows          []TSequenceFlow           `xml:"sequenceFlow"`
 	ServiceTasks           []TServiceTask            `xml:"serviceTask"`
 	UserTasks              []TUserTask               `xml:"userTask"`
+	ManualTasks            []TManualTask             `xml:"manualTask"`
 	SubProcesses           []TSubProcess             `xml:"subProcess"`
 	ParallelGateway        []TParallelGateway        `xml:"parallelGateway"`
 	ExclusiveGateway       []TExclusiveGateway       `xml:"exclusiveGateway"`
@@ -54,6 +57,7 @@ type TSubProcess struct {
 	IntermediateTrowEvent  []TIntermediateThrowEvent `xml:"intermediateThrowEvent"`
 	EventBasedGateway      []TEventBasedGateway      `xml:"eventBasedGateway"`
 	InclusiveGateway       []TInclusiveGateway       `xml:"inclusiveGateway"`
+	BoundaryEvents         []TBoundaryEvent          `xml:"boundaryEvent"`
 }
 
 // TBaseElement is an "abstract" struct
@@ -148,6 +152,22 @@ type TUserTask struct {
 	Input                []extensions.TIoMapping          `xml:"extensionElements>ioMapping>input"`
 	Output               []extensions.TIoMapping          `xml:"extensionElements>ioMapping>output"`
 	AssignmentDefinition extensions.TAssignmentDefinition `xml:"extensionElements>assignmentDefinition"`
+}
+
+type TManualTask struct {
+	TTask
+	Input  []extensions.TIoMapping `xml:"extensionElements>ioMapping>input"`
+	Output []extensions.TIoMapping `xml:"extensionElements>ioMapping>output"`
+}
+
+// TBoundaryEvent attaches to an activity and fires when its condition (timer/message) is met.
+// CancelActivity=true means interrupting (cancels the host activity); false means non-interrupting.
+type TBoundaryEvent struct {
+	TCatchEvent
+	CancelActivity         bool                    `xml:"cancelActivity,attr"`
+	AttachedToRef          string                  `xml:"attachedToRef,attr"`
+	TimerEventDefinition   TTimerEventDefinition   `xml:"timerEventDefinition"`
+	MessageEventDefinition TMessageEventDefinition `xml:"messageEventDefinition"`
 }
 
 type TParallelGateway struct {

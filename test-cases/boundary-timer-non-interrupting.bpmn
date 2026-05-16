@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="boundary-timer-non-interrupting" name="boundary-timer-non-interrupting" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="user-task" />
+    <bpmn:userTask id="user-task" name="user-task">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <!-- cancelActivity="false" = non-interrupting: task continues, boundary fires side-effect -->
+    <bpmn:boundaryEvent id="boundary-timer" name="reminder" cancelActivity="false" attachedToRef="user-task">
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1">
+        <bpmn:timeDuration>PT1S</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="user-task" targetRef="EndEvent_normal" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="boundary-timer" targetRef="ReminderTask" />
+    <bpmn:serviceTask id="ReminderTask" name="send-reminder">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="ReminderTask" targetRef="EndEvent_reminder" />
+    <bpmn:endEvent id="EndEvent_normal" name="normal-end">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEvent_reminder" name="reminder-end">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+</bpmn:definitions>

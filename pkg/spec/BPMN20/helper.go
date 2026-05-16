@@ -76,12 +76,31 @@ func FindBaseElementsById(processElement ProcessElement, id string) (elements []
 	for _, inclusiveGateway := range processElement.GetInclusiveGateway() {
 		appendWhenIdMatches(Ptr[BaseElement](inclusiveGateway))
 	}
+	for _, task := range processElement.GetManualTasks() {
+		appendWhenIdMatches(Ptr[BaseElement](task))
+	}
+	for _, be := range processElement.GetBoundaryEvents() {
+		appendWhenIdMatches(Ptr[BaseElement](be))
+	}
 	for _, subProcess := range processElement.GetSubProcess() {
 		appendWhenIdMatches(Ptr[BaseElement](subProcess))
 		// search recursively for further elements
 		elements = append(elements, FindBaseElementsById(subProcess, id)...)
 	}
 	return elements
+}
+
+// FindBoundaryEventsForElement returns all boundary events attached to the element with the given ID.
+func FindBoundaryEventsForElement(processElement ProcessElement, elementId string) (result []TBoundaryEvent) {
+	for _, be := range processElement.GetBoundaryEvents() {
+		if be.AttachedToRef == elementId {
+			result = append(result, be)
+		}
+	}
+	for _, subProcess := range processElement.GetSubProcess() {
+		result = append(result, FindBoundaryEventsForElement(subProcess, elementId)...)
+	}
+	return result
 }
 
 // HasConditionExpression returns true, if there's exactly 1 expression present (as by the spec)

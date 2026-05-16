@@ -1,4 +1,4 @@
-module github.com/nitram509/lib-bpmn-engine
+module github.com/globulario/lib-bpmn-engine
 
 go 1.23
 

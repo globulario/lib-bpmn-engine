@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20"
 	"github.com/senseyeio/duration"
 )
 
@@ -22,8 +22,12 @@ type Timer struct {
 	CreatedAt          time.Time     `json:"c"`
 	DueAt              time.Time     `json:"da"`
 	Duration           time.Duration `json:"du"`
-	originActivity     activity
-	baseElement        *BPMN20.BaseElement
+	// isBoundary marks timers created from boundaryEvent elements
+	isBoundary      bool
+	// parentElementId is the ID of the activity this boundary timer is attached to
+	parentElementId string
+	originActivity  activity
+	baseElement     *BPMN20.BaseElement
 }
 
 type TimerState string
@@ -140,15 +144,47 @@ func findExistingTimerNotYetTriggered(state *BpmnEngineState, id string, instanc
 	return t
 }
 
-func findDurationValue(ice BPMN20.TIntermediateCatchEvent, variableContext map[string]interface{}) (duration.Duration, error) {
-	durationStr := ice.TimerEventDefinition.TimeDuration.XMLText
+func (state *BpmnEngineState) createBoundaryTimer(instance *processInstanceInfo, be BPMN20.TBoundaryEvent, parentActivity activity) (*Timer, error) {
+	variableContext := instance.VariableHolder.Variables()
+	durationVal, err := parseDurationText(be.TimerEventDefinition.TimeDuration.XMLText, be.Id, be.Name, variableContext)
+	if err != nil {
+		return nil, err
+	}
+	var elem BPMN20.BaseElement = be
+	now := time.Now()
+	t := &Timer{
+		ElementId:          be.Id,
+		ElementInstanceKey: state.generateKey(),
+		ProcessKey:         instance.ProcessInfo.ProcessKey,
+		ProcessInstanceKey: instance.InstanceKey,
+		TimerState:         TimerCreated,
+		CreatedAt:          now,
+		DueAt:              durationVal.Shift(now),
+		Duration:           time.Duration(durationVal.TS) * time.Second,
+		isBoundary:         true,
+		parentElementId:    be.AttachedToRef,
+		baseElement:        &elem,
+		originActivity:     parentActivity,
+	}
+	state.timers = append(state.timers, t)
+	return t, nil
+}
 
-	// Check if it is expression
+func findExistingBoundaryTimerNotYetTriggered(state *BpmnEngineState, boundaryEventId string, instance *processInstanceInfo) *Timer {
+	for _, t := range state.timers {
+		if t.isBoundary && t.ElementId == boundaryEventId && t.ProcessInstanceKey == instance.InstanceKey && t.TimerState == TimerCreated {
+			return t
+		}
+	}
+	return nil
+}
+
+func parseDurationText(durationStr string, elementId string, elementName string, variableContext map[string]interface{}) (duration.Duration, error) {
 	if strings.HasPrefix(durationStr, "=") {
 		v, err := evaluateExpression(durationStr, variableContext)
 		if err != nil {
 			return duration.Duration{}, &ExpressionEvaluationError{
-				Msg: fmt.Sprintf("Error evaluating expression for timer id='%s' name='%s'", ice.Id, ice.Name),
+				Msg: fmt.Sprintf("Error evaluating expression for timer id='%s' name='%s'", elementId, elementName),
 				Err: err,
 			}
 		}
@@ -156,14 +192,17 @@ func findDurationValue(ice BPMN20.TIntermediateCatchEvent, variableContext map[s
 			durationStr = dur
 		} else {
 			return duration.Duration{}, &ExpressionEvaluationError{
-				Msg: fmt.Sprintf("Expression \"%s\" evaluated to a an invalid value for timer id='%s' name='%s'", durationStr, ice.Id, ice.Name),
+				Msg: fmt.Sprintf("Expression evaluated to invalid type for timer id='%s' name='%s'", elementId, elementName),
 				Err: errors.New("expression evaluated to an invalid type"),
 			}
 		}
 	}
-
 	if len(strings.TrimSpace(durationStr)) == 0 {
-		return duration.Duration{}, newEngineErrorf("Can't find 'timeDuration' value for INTERMEDIATE_CATCH_EVENT with id=%s", ice.Id)
+		return duration.Duration{}, newEngineErrorf("Can't find 'timeDuration' value for element with id=%s", elementId)
 	}
 	return duration.ParseISO8601(durationStr)
+}
+
+func findDurationValue(ice BPMN20.TIntermediateCatchEvent, variableContext map[string]interface{}) (duration.Duration, error) {
+	return parseDurationText(ice.TimerEventDefinition.TimeDuration.XMLText, ice.Id, ice.Name, variableContext)
 }

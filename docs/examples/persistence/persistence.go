@@ -1,6 +1,6 @@
 package main
 
-import "github.com/nitram509/lib-bpmn-engine/pkg/bpmn_engine"
+import "github.com/globulario/lib-bpmn-engine/pkg/bpmn_engine"
 
 func main() {
 	bpmnEngine := bpmn_engine.New()

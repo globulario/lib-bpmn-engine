@@ -2,7 +2,7 @@ package main
 
 import (
 	_ "embed"
-	"github.com/nitram509/lib-bpmn-engine/pkg/bpmn_engine"
+	"github.com/globulario/lib-bpmn-engine/pkg/bpmn_engine"
 	"net/http"
 )
 

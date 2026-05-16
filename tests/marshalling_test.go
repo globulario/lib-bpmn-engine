@@ -8,7 +8,7 @@ import (
 	"github.com/corbym/gocrest/has"
 	"github.com/corbym/gocrest/is"
 	"github.com/corbym/gocrest/then"
-	"github.com/nitram509/lib-bpmn-engine/pkg/bpmn_engine"
+	"github.com/globulario/lib-bpmn-engine/pkg/bpmn_engine"
 )
 
 type CallPath struct {

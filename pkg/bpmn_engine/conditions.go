@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20"
 )
 
 // exclusivelyFilterByConditionExpression

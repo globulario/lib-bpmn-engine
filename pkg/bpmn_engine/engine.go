@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/nitram509/lib-bpmn-engine/pkg/bpmn_engine/exporter"
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20"
+	"github.com/globulario/lib-bpmn-engine/pkg/bpmn_engine/exporter"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20"
 )
 
 type BpmnEngine interface {
@@ -241,10 +241,33 @@ func (state *BpmnEngineState) handleElement(process BPMN20.ProcessElement, act a
 		taskElement := (*element).(BPMN20.TaskElement)
 		_, activity = state.handleServiceTask(process, instance, &taskElement)
 		createFlowTransitions = activity.State() == Completed
+		if activity.State() == Active {
+			state.registerBoundaryTimers(process, instance, element, activity)
+		}
 	case BPMN20.UserTask:
 		taskElement := (*element).(BPMN20.TaskElement)
 		activity = state.handleUserTask(process, instance, &taskElement)
 		createFlowTransitions = activity.State() == Completed
+		if activity.State() == Active {
+			state.registerBoundaryTimers(process, instance, element, activity)
+		}
+	case BPMN20.ManualTask:
+		taskElement := (*element).(BPMN20.TaskElement)
+		activity = state.handleUserTask(process, instance, &taskElement)
+		createFlowTransitions = activity.State() == Completed
+		if activity.State() == Active {
+			state.registerBoundaryTimers(process, instance, element, activity)
+		}
+	case BPMN20.BoundaryEvent:
+		be := (*element).(BPMN20.TBoundaryEvent)
+		createFlowTransitions, activity, err = state.handleBoundaryEvent(process, instance, be)
+		if err != nil {
+			nextCommands = append(nextCommands, errorCommand{
+				err:         err,
+				elementId:   (*element).GetId(),
+				elementName: (*element).GetName(),
+			})
+		}
 	case BPMN20.IntermediateCatchEvent:
 		ice := (*element).(BPMN20.TIntermediateCatchEvent)
 		createFlowTransitions, activity, err = state.handleIntermediateCatchEvent(process, instance, ice, originActivity)
@@ -385,16 +408,22 @@ func (state *BpmnEngineState) handleIntermediateCatchEvent(process BPMN20.Proces
 }
 
 func (state *BpmnEngineState) handleEndEvent(process BPMN20.ProcessElement, act activity, instance *processInstanceInfo) bool {
-	activeMessageSubscriptions := false
-	for _, ms := range state.messageSubscriptions {
-		if ms.ProcessInstanceKey == instance.InstanceKey {
-			activeMessageSubscriptions = activeMessageSubscriptions || ms.State() == Active || ms.State() == Ready
-		}
-		if activeMessageSubscriptions {
+	hasActivePendingWork := false
+	for _, j := range state.jobs {
+		if j.ProcessInstanceKey == instance.InstanceKey && j.JobState == Active {
+			hasActivePendingWork = true
 			break
 		}
 	}
-	if !activeMessageSubscriptions {
+	if !hasActivePendingWork {
+		for _, ms := range state.messageSubscriptions {
+			if ms.ProcessInstanceKey == instance.InstanceKey && (ms.State() == Active || ms.State() == Ready) {
+				hasActivePendingWork = true
+				break
+			}
+		}
+	}
+	if !hasActivePendingWork {
 		act.SetState(Completed)
 	}
 	switch process.(type) {
@@ -441,6 +470,62 @@ func (state *BpmnEngineState) handleSubProcess(instance *processInstanceInfo, su
 	}
 	err = state.run(subProcessElement, instance, subProcessActivity)
 	return subProcessActivity, err
+}
+
+// registerBoundaryTimers creates timer entries for any boundary timer events attached to the given task element.
+func (state *BpmnEngineState) registerBoundaryTimers(process BPMN20.ProcessElement, instance *processInstanceInfo, element *BPMN20.BaseElement, taskActivity activity) {
+	for _, be := range BPMN20.FindBoundaryEventsForElement(process, (*element).GetId()) {
+		if !be.IsTimer() {
+			continue
+		}
+		if findExistingBoundaryTimerNotYetTriggered(state, be.Id, instance) != nil {
+			continue
+		}
+		_, _ = state.createBoundaryTimer(instance, be, taskActivity)
+	}
+}
+
+// handleBoundaryEvent is called when a boundary timer fires during instance continuation.
+func (state *BpmnEngineState) handleBoundaryEvent(process BPMN20.ProcessElement, instance *processInstanceInfo, be BPMN20.TBoundaryEvent) (continueFlow bool, act activity, err error) {
+	timer := findExistingBoundaryTimerNotYetTriggered(state, be.Id, instance)
+	if timer == nil {
+		return false, nil, nil
+	}
+
+	// If the parent activity is already done, just cancel the timer and stop.
+	parentJob := findJobByElementId(state.jobs, be.AttachedToRef, instance.InstanceKey)
+	if parentJob != nil && parentJob.JobState != Active {
+		timer.TimerState = TimerCancelled
+		return false, nil, nil
+	}
+
+	if !time.Now().After(timer.DueAt) {
+		return false, nil, nil
+	}
+
+	timer.TimerState = TimerTriggered
+
+	// Interrupting: cancel the parent job so the task doesn't complete normally.
+	if be.CancelActivity && parentJob != nil {
+		parentJob.JobState = Withdrawn
+	}
+
+	var elem BPMN20.BaseElement = be
+	act = &elementActivity{
+		key:     state.generateKey(),
+		state:   Completed,
+		element: &elem,
+	}
+	return true, act, nil
+}
+
+func findJobByElementId(jobs []*job, elementId string, instanceKey int64) *job {
+	for _, j := range jobs {
+		if j.ElementId == elementId && j.ProcessInstanceKey == instanceKey {
+			return j
+		}
+	}
+	return nil
 }
 
 func (state *BpmnEngineState) findActiveJobsForContinuation(instance *processInstanceInfo) (ret []*job) {

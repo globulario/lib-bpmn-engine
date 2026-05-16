@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20"
 )
 
 type MessageSubscription struct {

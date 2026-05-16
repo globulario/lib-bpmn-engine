@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/nitram509/lib-bpmn-engine/pkg/spec/BPMN20"
+	"github.com/globulario/lib-bpmn-engine/pkg/spec/BPMN20"
 )
 
 const CurrentSerializerVersion = 1
@@ -94,7 +94,7 @@ type activityAdapter struct {
 }
 
 // activitySurrogate only exists to have a simple way of marshalling originActivities in MessageSubscription and Timer
-// TODO see issue https://github.com/nitram509/lib-bpmn-engine/issues/190
+// TODO see issue https://github.com/globulario/lib-bpmn-engine/issues/190
 type activitySurrogate struct {
 	ActivityKey        int64         `json:"k"`
 	ActivityState      ActivityState `json:"s"`
@@ -154,7 +154,7 @@ func (t *Timer) MarshalJSON() ([]byte, error) {
 	ta := &timerAdapter{
 		timerAlias: (*timerAlias)(t),
 	}
-	// TODO see issue https://github.com/nitram509/lib-bpmn-engine/issues/190
+	// TODO see issue https://github.com/globulario/lib-bpmn-engine/issues/190
 	ta.OriginActivitySurrogate = activitySurrogate{
 		ActivityKey:        t.originActivity.Key(),
 		ActivityState:      t.originActivity.State(),
@@ -180,7 +180,7 @@ func (m *MessageSubscription) MarshalJSON() ([]byte, error) {
 	msa := &messageSubscriptionAdapter{
 		messageSubscriptionAlias: (*messageSubscriptionAlias)(m),
 	}
-	// TODO see issue https://github.com/nitram509/lib-bpmn-engine/issues/190
+	// TODO see issue https://github.com/globulario/lib-bpmn-engine/issues/190
 	msa.OriginActivitySurrogate = activitySurrogate{
 		ActivityKey:        m.originActivity.Key(),
 		ActivityState:      m.originActivity.State(),
